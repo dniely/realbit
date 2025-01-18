@@ -148,23 +148,24 @@
 
         // 코인 가격 가져오기
         async function fetchCoinPrice() {
-            try {
-                const response = await fetch(`https://api.upbit.com/v1/ticker?markets=KRW-${coinSelect.value}`);
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    coinPrice = data[0].trade_price;
-                    coinPriceElement.textContent = coinPrice.toLocaleString();
-                    coinNameElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
-                    selectedCoinElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
-                    updateUI();
-                } else {
-                    throw new Error('가격 데이터 없음');
-                }
-            } catch (error) {
-                console.error("코인 가격 가져오기 실패:", error);
-                coinPriceElement.textContent = "가격 불러오기 실패";
-            }
-        }
+  try {
+    const response = await fetch(`/api/upbit?coin=${coinSelect.value}`);
+    const data = await response.json();
+    if (data && data.length > 0) {
+      coinPrice = data[0].trade_price;
+      coinPriceElement.textContent = coinPrice.toLocaleString();
+      coinNameElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
+      selectedCoinElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
+      updateUI();
+    } else {
+      throw new Error('가격 데이터 없음');
+    }
+  } catch (error) {
+    console.error("코인 가격 가져오기 실패:", error);
+    coinPriceElement.textContent = "가격 불러오기 실패";
+  }
+}
+
 
         // 매수
         buyButton.addEventListener("click", () => {
