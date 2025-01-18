@@ -237,10 +237,7 @@ sellButton.addEventListener("click", () => {
     fetchRanking();  // 매도 후 랭킹을 다시 불러옵니다.
 });
 
-// 실시간 가격 업데이트
-setInterval(fetchCoinPrice, 5000); // 5초마다 업데이트
-
-// 랭킹 업데이트
+// 랭킹 데이터 업데이트
 async function updateRanking() {
     const gameData = JSON.parse(localStorage.getItem("gameData"));
     if (!gameData) return;
@@ -259,7 +256,6 @@ async function updateRanking() {
 
         if (response.ok) {
             alert("랭킹이 업데이트되었습니다!");
-            fetchRanking(); // 랭킹 업데이트 후 UI 반영
         } else {
             alert("랭킹 업데이트 실패");
         }
@@ -274,7 +270,7 @@ async function fetchRanking() {
         const response = await fetch('/api/ranking');
         const rankings = await response.json();
 
-        rankingListElement.innerHTML = '';
+        rankingListElement.innerHTML = '';  // 기존 랭킹을 지우고 새로 추가합니다.
         rankings.forEach((rank, index) => {
             const listItem = document.createElement('li');
             listItem.textContent = `${index + 1}. ${rank.name} - 잔액: ${rank.balance.toLocaleString()} KRW`;
