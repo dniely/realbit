@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Game with Ranking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            letter-spacing: 0; /* 글자 간격 설정 */
+            margin: 0;
+            padding: 10px;
+        }
+        h2, h3, label, button {
+            margin: 5px 0;
+            padding: 0;
+        }
+        select, input {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        ol {
+            margin: 10px 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>현재 보유 잔액: <br><span id="balance">10000000</span> KRW</h2>
+    <h2>현재 <span id="coin-name">비트코인</span> 가격:<br> <span id="coin-price">불러오는 중...</span> KRW</h2>
+    <h3>보유한 <span id="selected-coin">비트코인</span> 수량: <span id="coin-holdings">0</span></h3>
+    <h3>매수 시점 기준 변동률: <span id="change-percentage">0</span>%</h3>
+    <h3>총 수익: <span id="profit">0</span> KRW</h3>
+
+    <label for="coin-select">코인 선택: </label>
+    <select id="coin-select">
+        <option value="BTC">비트코인</option>
+        <option value="DOGE">도지코인</option>
+        <option value="ETH">이더리움</option>
+    </select>
+
+    <br><br>
+
+    <label for="buy-amount">구매 금액 (KRW):
+    <input type="number" id="buy-amount" placeholder="금액 입력">
+    <button id="buy-btn">매수</button>
+    <button id="sell-btn">모두 매도</button>
+
+    <h2>🏆 실시간 랭킹</h2>
+    <ol id="ranking-list"></ol>
+
+    <script>
+        const balanceElement = document.getElementById("balance");
+        const coinPriceElement = document.getElementById("coin-price");
+        const coinNameElement = document.getElementById("coin-name");
+        const selectedCoinElement = document.getElementById("selected-coin");
+        const coinHoldingsElement = document.getElementById("coin-holdings");
+        const changePercentageElement = document.getElementById("change-percentage");
+        const profitElement = document.getElementById("profit");
+        const buyAmountInput = document.getElementById("buy-amount");
+        const coinSelect = document.getElementById("coin-select");
+        const buyButton = document.getElementById("buy-btn");
+        const sellButton = document.getElementById("sell-btn");
+        const rankingListElement = document.getElementById("ranking-list");
+
+        let balance = 10000000; // 초기 잔액
+        let coinPrice = 0; // 선택한 코인의 가격
+        let coinHoldings = 0; // 초기 보유 코인
+        let purchasePrice = 0; // 초기 매수 평균가
+        let totalInvestment = 0; // 초기 투자 금액
+        let playerName = "";
+
+        // 초기화: 이름 입력 및 데이터 설정
+        function initializeGame() {
+            const storedData = JSON.parse(localStorage.getItem("gameData"));
+            if (!storedData) {
+                // 새로운 게임 시작
+                playerName = prompt("사용자 이름을 입력하세요:").trim();
+                if (!playerName) {
+                    alert("이름은 필수 입력입니다. 페이지를 새로고침해주세요.");
+                    return;
+                }
+
+                const newGameData = {
+                    name: playerName,
+                    balance: balance,
+                    coinHoldings: coinHoldings,
+                    purchasePrice: purchasePrice,
+                    totalInvestment: totalInvestment,
+                };
+
+                localStorage.setItem("gameData", JSON.stringify(newGameData));
+            } else {
+                // 저장된 데이터 불러오기
+                playerName = storedData.name;
+                balance = storedData.balance;
+                coinHoldings = storedData.coinHoldings;
+                purchasePrice = storedData.purchasePrice;
+                totalInvestment = storedData.totalInvestment;
+            }
+
+            // 랭킹 표시
+            updateRankingList();
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            balanceElement.textContent = balance.toLocaleString();
+            coinHoldingsElement.textContent = coinHoldings.toFixed(6);
+            if (purchasePrice > 0) {
+                const changePercentage = ((coinPrice - purchasePrice) / purchasePrice) * 100;
+                const profit = coinHoldings * (coinPrice - purchasePrice);
+
+                changePercentageElement.textContent = changePercentage.toFixed(2);
+                profitElement.textContent = profit.toLocaleString();
+
+                // 랭킹 업데이트
+                updateRankingList();
+            }
+        }
+
+        // 랭킹 데이터 업데이트 및 표시
+        function updateRankingList() {
+            const rankings = JSON.parse(localStorage.getItem("rankings")) || [];
+            const gameData = JSON.parse(localStorage.getItem("gameData"));
+
+            if (gameData) {
+                const userRanking = {
+                    name: gameData.name,
+                    balance: gameData.balance,
+                };
+
+                // 랭킹 데이터에 현재 사용자 정보 저장
+                const updatedRankings = rankings.filter(r => r.name !== gameData.name); // 기존 사용자 삭제
+                updatedRankings.push(userRanking); // 현재 사용자 추가
+                updatedRankings.sort((a, b) => b.balance - a.balance); // 잔액 기준 내림차순 정렬
+                localStorage.setItem("rankings", JSON.stringify(updatedRankings));
+
+                // UI에 표시
+                rankingListElement.innerHTML = "";
+                updatedRankings.forEach((rank, index) => {
+                    const listItem = document.createElement("li");
+                    listItem.textContent = `${index + 1}. ${rank.name} - 잔액: ${rank.balance.toLocaleString()} KRW`;
+                    rankingListElement.appendChild(listItem);
+                });
+            }
+        }
+
+        // 코인 가격 가져오기
+        async function fetchCoinPrice() {
+            try {
+                const response = await fetch(`https://api.upbit.com/v1/ticker?markets=KRW-${coinSelect.value}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    coinPrice = data[0].trade_price;
+                    coinPriceElement.textContent = coinPrice.toLocaleString();
+                    coinNameElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
+                    selectedCoinElement.textContent = coinSelect.options[coinSelect.selectedIndex].text;
+                    updateUI();
+                } else {
+                    throw new Error('가격 데이터 없음');
+                }
+            } catch (error) {
+                console.error("코인 가격 가져오기 실패:", error);
+                coinPriceElement.textContent = "가격 불러오기 실패";
+            }
+        }
+
+        // 매수
+        buyButton.addEventListener("click", () => {
+            const buyAmount = parseFloat(buyAmountInput.value);
+            if (isNaN(buyAmount) || buyAmount <= 0 || buyAmount > balance) {
+                alert("유효한 금액을 입력하세요!");
+                return;
+            }
+            const coinQuantity = buyAmount / coinPrice;
+            balance -= buyAmount;
+            coinHoldings += coinQuantity;
+            totalInvestment += buyAmount;
+            purchasePrice = totalInvestment / coinHoldings;
+
+            localStorage.setItem("gameData", JSON.stringify({
+                name: playerName,
+                balance: balance,
+                coinHoldings: coinHoldings,
+                purchasePrice: purchasePrice,
+                totalInvestment: totalInvestment,
+            }));
+
+            updateUI();
+            alert(`${coinSelect.options[coinSelect.selectedIndex].text} ${coinQuantity.toFixed(6)} 개 매수 완료!`);
+        });
+
+        // 매도
+        sellButton.addEventListener("click", () => {
+            if (coinHoldings <= 0) {
+                alert("매도할 코인이 없습니다!");
+                return;
+            }
+            const sellAmount = coinHoldings * coinPrice;
+            balance += sellAmount;
+            coinHoldings = 0;
+            totalInvestment = 0;
+            purchasePrice = 0;
+
+            localStorage.setItem("gameData", JSON.stringify({
+                name: playerName,
+                balance: balance,
+                coinHoldings: coinHoldings,
+                purchasePrice: purchasePrice,
+                totalInvestment: totalInvestment,
+            }));
+
+            updateUI();
+            alert(`${coinSelect.options[coinSelect.selectedIndex].text} 모두 매도 완료!`);
+        });
+
+        // 초기화
+        initializeGame();
+        fetchCoinPrice();
+        setInterval(fetchCoinPrice, 5000); // 5초마다 업데이트
+    </script>
+</body>
+</html>
