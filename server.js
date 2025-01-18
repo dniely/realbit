@@ -8,6 +8,14 @@ const PORT = 3000;
 // 클라이언트 파일 서빙 설정
 app.use(express.static('public'));
 
+// CORS 헤더 추가 (모든 도메인 허용)
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // 모든 출처 허용
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 // 기본 라우트로 HTML 파일 제공
 app.get('/', (req, res) => {
   res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
@@ -18,7 +26,7 @@ app.get('/api/upbit', async (req, res) => {
   try {
     const response = await fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH,KRW-DOGE');
     const data = await response.json();
-    res.json(data);
+    res.json(data); // 데이터를 클라이언트에 반환
   } catch (error) {
     console.error('Error fetching data from Upbit API:', error);
     res.status(500).json({ error: 'Failed to fetch data from Upbit API' });
