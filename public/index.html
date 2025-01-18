@@ -216,23 +216,29 @@
             alert(`${coinSelect.options[coinSelect.selectedIndex].text} 모두 매도 완료!`);
         });
 
-        async function fetchRanking() {
-    try {
-        const response = await fetch('/api/ranking');
-        const rankings = await response.json();
+        // 랭킹을 초기화할 때만 한 번만 호출하도록 수정
+window.onload = function () {
+    fetchRanking();
+    initializeGame();
+    fetchCoinPrice();
+};
 
-        rankingListElement.innerHTML = '';
-        rankings.forEach((rank, index) => {
-            const listItem = document.createElement('li');
-            listItem.textContent = `${index + 1}. ${rank.name} - 잔액: ${rank.balance.toLocaleString()} KRW`;
-            rankingListElement.appendChild(listItem);
-        });
-    } catch (error) {
-        console.error("랭킹 정보 가져오기 실패:", error);
-    }
-}
+// 매수 후 랭킹 업데이트
+buyButton.addEventListener("click", () => {
+    // 매수 로직...
+    updateRanking();
+});
 
-// 게임 종료 후 랭킹 업데이트
+// 매도 후 랭킹 업데이트
+sellButton.addEventListener("click", () => {
+    // 매도 로직...
+    updateRanking();
+});
+
+// 실시간 가격 업데이트
+setInterval(fetchCoinPrice, 5000); // 5초마다 업데이트
+
+// 랭킹 업데이트
 async function updateRanking() {
     const gameData = JSON.parse(localStorage.getItem("gameData"));
     if (!gameData) return;
@@ -260,19 +266,23 @@ async function updateRanking() {
     }
 }
 
-// 매수 또는 매도 후 랭킹 업데이트
-buyButton.addEventListener("click", () => {
-    // 매수 로직...
-    updateRanking();
-});
+// 랭킹 리스트 가져오기
+async function fetchRanking() {
+    try {
+        const response = await fetch('/api/ranking');
+        const rankings = await response.json();
 
-sellButton.addEventListener("click", () => {
-    // 매도 로직...
-    updateRanking();
-});
+        rankingListElement.innerHTML = '';
+        rankings.forEach((rank, index) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `${index + 1}. ${rank.name} - 잔액: ${rank.balance.toLocaleString()} KRW`;
+            rankingListElement.appendChild(listItem);
+        });
+    } catch (error) {
+        console.error("랭킹 정보 가져오기 실패:", error);
+    }
+}
 
-// 페이지 로드 시 랭킹 업데이트
-window.onload = fetchRanking;
 
         // 초기화
         initializeGame();
